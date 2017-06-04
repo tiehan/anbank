@@ -1,0 +1,76 @@
+#!/usr/bin/python
+#coding:UTF-8
+
+import os
+import sys
+import click
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+folder_here = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, folder_here)
+sys.path.insert(0, folder_here[:-3])
+
+
+from anbank.main import run_main,run_merge
+import anbank
+
+@click.group()
+def cli1():
+    pass
+
+@cli1.command()
+@click.option('--input', help=unicode('包含fasta文件的文件夹，包含测序文件',errors='ignore'))
+@click.option('--excel', help=unicode('excel文件名，默认的是跟fasta文件放在一个文件夹下，包含 片段大小 和 反应结果这两列',errors='ignore'))
+@click.option('--qual_length', help=unicode('要求测序序列长度的最小值,默认是600',errors='ignore'),default=600 )
+@click.option('--seq_start', help=unicode('保留序列的起始位置，默认是50',errors='ignore') ,default=50 )
+@click.option('--seq_end', help=unicode('保留序列的终止位置，默认是600',errors='ignore') ,default=600 )
+@click.option('--output', help=unicode("输出文件夹，默认data文件夹",errors='ignore')  )
+@click.option('--user', help=unicode("raw_data文件夹下的子文件夹，默认biogas",errors='ignore') ,default ='biogas' )
+@click.option('--filter_identity', help=unicode("相似性判断，默认小于97的相似性判断为比对失败的序列",errors='ignore') ,default=97 )
+@click.option('--version',nargs=0, default='.', help='程序版本')
+def run(excel,input,output,version,qual_length,seq_start,seq_end,filter_identity,user):
+   """run pipeline"""
+   if len(version) == 0:
+        print anbank.__version__
+        exit()
+   run_main(excel,input,output,qual_length,seq_start,seq_end,filter_identity,user)
+   pass
+
+
+@click.group()
+def cli2():
+    pass
+
+
+@cli2.command()
+@click.option('--excel',help=unicode("输入的excel文件,默认测序编号跟物种比对结果的名字要一致", errors='ignore'))
+@click.option('--user', help=unicode("raw_data文件夹下的子文件夹，默认biogas",errors='ignore') ,default ='biogas' )
+# @click.option('--input',help=unicode("物种比对结果",errors='ignore'))
+@click.option('--output',help=unicode("excel结果汇总",errors='ignore'))
+# @click.option('--excel',help="input excel")
+# @click.option('--input',help="blast resutl")
+# @click.option('--output',help="excel merge result")
+def merge(excel,output,user):
+    """merge excel information with result"""
+    input = ''
+    run_merge(excel,user,input,output)
+    pass
+ 
+ 
+@click.group()
+def cli3():
+    pass
+ 
+ 
+@cli3.command()
+@click.option('--output',help='excel')
+def install():
+    """install programs"""
+    pass
+ 
+ 
+main  = click.CommandCollection(sources=[cli1, cli2, cli3])
+ 
+if __name__ == "__main__":
+    main()
