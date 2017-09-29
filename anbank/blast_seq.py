@@ -3,6 +3,9 @@ from __future__ import division
 import subprocess
 import time
 import os
+import sys
+sys.path.append("/home/sam/anBank/lib/miniconda2/pkgs/biopython-1.70-np112py27_0/lib/python2.7/site-packages")
+
 from Bio.Blast import NCBIXML
 
 from log_anbank import logger

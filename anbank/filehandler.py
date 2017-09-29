@@ -132,7 +132,7 @@ class ReadFiles(object):
                 one_line_info.append(worksheet.cell_value(rown, coln))
 
             seq_name_line = worksheet.cell_value(rown, seq_col_loc)
-            if seq_name_line != '' :
+            if seq_name_line != "pass" :
                 num += 1
                 excel_hash[num] = {}
                 excel_hash[num]['seq_name'] = seq_name_line
@@ -206,7 +206,7 @@ def merge_blast_rdp_file(blast_fp,rdp_fp,result_fp):
                 rdp_class = taxon_speies[2].replace('c__', '')
                 rdp_order = taxon_speies[3].replace('o__', '')
                 rdp_family = taxon_speies[4].replace('f__', '').replace('[', '').replace(']', '')
-            elif  taxon_num == 6:
+            elif  taxon_num >= 6:
                 rdp_kindom = taxon_speies[0].replace('k__', '')
                 rdp_phylum = taxon_speies[1].replace('p__', '')
                 rdp_class = taxon_speies[2].replace('c__', '')

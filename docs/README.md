@@ -88,8 +88,6 @@ ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.6.0+-x64
 Judge microbial species after sequencing and store information for microbial resources.
 
 log管理
- 
-
 
 
 讨论三：
@@ -155,6 +153,107 @@ ls *.tar.gz | xargs -n1 tar xzvf
 4）能否设置反应结果这项当成功，就提取这个序列，不用精确等于成功，最终合并表中反应结果与测序公司给的反应结果这两列匹配
 答复：已修改
 
+## 20170614
+1) 合并文件失败
+
+## 20160629 
+反馈：
+我合并测序结果和原表格后，未进行PCR测序的数据全被删除了，这是为什么呢？
+python anbank.py merge  --excel ../raw_data/zwq/ZWQPCR20170629.xlsx --output ../data/zwq/result_2017062901.xlsx --user zwq
+原因：
+我默认的就是   测序编号那一个  一旦为空  就不在最后的结果里面出现
+解决：
+现在已经改了  即使为空，也在最后的结果中出现
+
+## 20170707 
+1.报错
+运行：
+python anbank.py run --excel TSS20170704-028-0360.xls --input 2017070402 --user zwq
+报错原因：
+export RDP_JAR_PATH=/sam/rdp_classifier_2.2/rdp_classifier-2.2.jar;
+/usr/lib/qiime/bin/assign_taxonomy.py -i /sam/anBank/data/zwq/2017070402/2017070402.fa -m rdp --rdp_max_memory 40000 -o  rdp_assigned_taxonomy -r /sam/anBank/database/greengene/gg_13_8_otus/rep_set/97_otus.fasta -t /sam/anBank/database/greengene/gg_13_8_otus/taxonomy/97_otu_taxonomy.txt 
+Traceback (most recent call last):
+  File "/usr/lib/qiime/bin/assign_taxonomy.py", line 15, in <module>
+    from qiime.util import (parse_command_line_parameters,
+ImportError: cannot import name get_tmp_filename
+
+解决策略：
+用conda 来安装以及更新qiime
+wget -c https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
+
+阅读最新的qiime流程
+python anbank.py run --excel TSS20170706-028-0603.xls --input test --user test
+
+测试assign这一步
+查看assign_taxonomy.py脚本跟之前的有什么不一样 
+
+python /sam/anBank/lib/miniconda2/pkgs/qiime-1.9.1-np110py27_0/bin/assign_taxonomy.py -i /sam/anBank/data/test/test/test.fa -m rdp --rdp_max_memory 40000 -o  rdp_assigned_taxonomy -r /sam/anBank/database/greengene/gg_13_8_otus/rep_set/97_otus.fasta -t /sam/anBank/database/greengene/gg_13_8_otus/taxonomy/97_otu_taxonomy.txt
+
+
+conda remove –name qiime1 –all
+报错：
+
+UnicodeEncodeError: 'ascii' codec can't encode character u'\u2013' in position 0: ordinal not in range(128
+
+
+注释掉qiime的全局环境
+sudo vim /etc/profile
+
+ source /sam/anBank/lib/miniconda2/bin/activate 
+ 
+ bioconda安装。。
+ 
+ 然后安装qiime
+ 
+export RDP_JAR_PATH=/sam/rdp_classifier_2.2/rdp_classifier-2.2.jar;
+export qiime=/sam/anBank/lib/miniconda2/pkgs/qiime-1.9.1-np110py27_0/lib/python2.7/site-packages/qiime；
+
+/sam/anBank/lib/miniconda2/pkgs/qiime-1.9.1-np110py27_0/bin/assign_taxonomy.py  -i /sam/anBank/data/zwq/2017070402/2017070402.fa -m rdp --rdp_max_memory 40000 -o  rdp_assigned_taxonomy -r /sam/anBank/database/greengene/gg_13_8_otus/rep_set/97_otus.fasta -t /sam/anBank/database/greengene/gg_13_8_otus/taxonomy/97_otu_taxonomy.txt 
+
+2.程序比对出来的相似性比blast出来的结果要小
+
+
+### 20170723
+cd  /sam/anBank/bin
+source /sam/anBank/lib/miniconda2/bin/activate qiime1
+python anbank.py run --excel TSS20170704-028-0359.xls --input 2017070401 --user zwq
+
+### 20170806
+服务器系统更新
+将anBank移动到了/home/sam/anBank下面来了
+- 将miniconda中qiime对应的脚本修改了解释器的路径
+- 增加ncbi数据库路径文件
+- 将rdp移动到了lib中
+
+### 20170817
+因为所有序列聚类otu太慢，所以增加一个参数，选择是否进行所有序列的otu聚类
+-rdp  False则是不进行所有序列的otu聚类，默认的是True
+ 
+
+### 20170926
+需求：
+
+从最终合并的结果表中直接提取以下信息汇成表格（根据重新给你表格进行）
+表头字段：
+分离菌株，筛选测序质量字段仅且仅等于“成功”；
+相似度，要求相似度≤97%；
+保菌等级，对于相似度≤97%这一区间数值再进行等级区分，例：94%<相似度≤97%为等级1；90%<相似度≤94%为等级2；相似度<94%为等级3；
+登录号（OTU）
+菌株编号
+样品来源
+Treatment
+
+要求：
+
+1. 测试文件第一行不能为空行，必须为表头（删除了提供文件的第一空行）
+2. 每一列都需要有表头 (在提供的文件中加了Genus	score 这两列的名字)
+3. 每一列的表头不能重复（比如：有两个孔位，已经修改了其中的一个）
+
+另：对total中每一个OTU分类的序列能否汇总成一个fasta文件
+
+已解决：
+新增extract和splitotu两个功能
+
 
 ## 使用说明：
 (序列相似性技术路线是blast+ NCBI 16S数据库；
@@ -166,10 +265,13 @@ otu 聚类技术路线是rdp，算法为blast，97%的相似性)
    a.input文件夹为测序结果文件，解压缩，需要放置在raw_data文件夹下面
    b.excel为input下面的文件,excel文件中包含三列：样品名称（用于找序列，
    需要跟input_dir中的序列文件名保持一致），片段大小(用于过滤序列)，反应结果（仅且仅当成功才提取这个序列）
+
 cd  /sam/anBank/bin
 python anbank.py run --help
-python anbank.py run --excel TSS20170421-028-2239.xls --input 20170420 --user biogas
 
+source /sam/anBank/lib/miniconda2/bin/activate qiime1
+python anbank.py run --excel TSS20170421-028-2239.xls --input 20170420 --user biogas
+ te
 比对结果说明:
 identity1  代表输入序列比对到数据库中的那部分序列跟参比序列的相似性（ncbi默认的相似性）	
 identity2  代表整个输入序列跟参比序列的相似性
@@ -178,10 +280,25 @@ identity3  代表输入序列比对到数据库中的那部分序列除以整个
 2.合并excel文件和测序结果文件
  excel文件sheet名字为analyis，默认"测序编号"这一列跟序列名字一致,文件中的是20170420，我改为了20170406）
 python anbank.py merge --help
-python anbank.py merge  --excel ../docs/summary_info.xlsx --output ../docs/result.xlsx --user biogas
+python anbank.py merge  --excel ../docs/summary_info.xlsx --output ../docs/result.xlsx --user zmq
 
 
 
 
+## 测试命令
+cd  /home/sam/anBank/bin
+source /home/sam/anBank/lib/miniconda2/bin/activate qiime1
 
+## 1.序列分析
+python anbank.py run --excel test.xls --input test --user test
+### 不进行所有序列的Otu聚类
+python anbank.py run --excel test.xls --input test --user test --rdp False
 
+## 2.合并序列分析结果与样本记录信息
+python anbank.py merge  --excel ../docs/summary_info.xlsx --output ../docs/result.xlsx --user zmq
+
+## 3.提取相似性不高的序列
+python anbank.py extract --input input.xlsx --output output.xlsx
+
+## 4.获取每个otu中的fasta序列
+python anbank.py splitotu --fasta input.fasta --otu out_file --outdir outputdir

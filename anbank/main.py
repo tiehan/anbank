@@ -1,6 +1,8 @@
 #coding:UTF-8
 import os
 import glob
+import xlwt
+
 
 import sys
 reload(sys)
@@ -15,9 +17,10 @@ from anbank.get_otu import get_otu_by_rdp,get_taxonomy_info_by_rdp
 
 data_dir = os.path.join(base_dir,'data')
 
-def run_main(excel,input_dir,output_dir,qual_length,seq_start,seq_end,filter_identity,user):
+def run_main(excel,input_dir,output_dir,qual_length,seq_start,seq_end,filter_identity,user,rdp):
     parallel = create_base_logger()
     setup_local_logging(config)
+
     fasta_file,fasta_info_file = get_fasta_seq(user,excel,input_dir,output_dir,qual_length,seq_start,seq_end)
 
     fasta_dir = os.path.dirname(fasta_file)
@@ -32,10 +35,11 @@ def run_main(excel,input_dir,output_dir,qual_length,seq_start,seq_end,filter_ide
     blast_rdp_file = fasta_file.replace('.fa','_blast_rdp_result.tsv')
 
     blast_input(fasta_file,blast_output)
+
     analysis_blast_result_xml(blast_output,analysis_result,fasta_file,fail_fasta_file,filter_identity)
 
-
     get_taxonomy_info_by_rdp(fasta_file)
+
     otu_dir = os.path.join(os.path.dirname(fasta_file),'otu')
     get_otu_by_rdp(otu_dir, fasta_file)
 
@@ -43,16 +47,24 @@ def run_main(excel,input_dir,output_dir,qual_length,seq_start,seq_end,filter_ide
 
     user_data_dir = os.path.join(data_dir,user)
     merge_result(user_data_dir)
-    get_otu_by_rdp(os.path.join(user_data_dir,'Total','otu'),'../total.fa',genus_loc='Y')
+
+    ## total seq otu
+    if rdp == 'False':
+        print 'We will skip total seqs otu analysis!'
+        pass
+    else:
+        get_otu_by_rdp(os.path.join(user_data_dir,'Total','otu'),'../total.fa',genus_loc='Y')
 
     logger.warn('Finish analysis！ Thanks for using anBank')
 
 def run_merge(excel,user,input,output):
+    parallel = create_base_logger()
+    setup_local_logging(config)
+
     input_file = os.path.join(base_dir,'data/%s/Total/total_genus_result.tsv' % user)
-    seq_file = os.path.join(base_dir,'data/Total/total_seq_info.tsv')
+    seq_file = os.path.join(base_dir,'data/%s/Total/total_seq_info.tsv' % user)
 
     seqs_info = ReadFiles.read_excel_onesheet2(excel,sheet_name='analysis',same_line_debug=False)
-
 
     seqs_genus_info = ReadFiles.read_tsv(input_file)
     seqs_status_info = ReadFiles.read_tsv(seq_file)
@@ -62,6 +74,7 @@ def run_merge(excel,user,input,output):
             header = seqs_info[one_key]['one_line']
         else:
             seq_name = seqs_info[one_key]['seq_name']
+            # print seq_name
             # seq_name2 = str(seq_name.encode('utf-8'))
             if seq_name in seqs_genus_info.keys():
 
@@ -69,7 +82,6 @@ def run_merge(excel,user,input,output):
                 # print seqs_genus_info[seq_name]['genus']
                 status =seqs_status_info[seq_name]['status'].decode('utf-8')
                 # status =''
-
                 one_line2 = [status,
                              seqs_status_info[seq_name]['result'],
                             seqs_genus_info[seq_name]['genus'],'.',
@@ -98,8 +110,7 @@ def run_merge(excel,user,input,output):
                 seqs_info[one_key]['one_line'] = one_line
 
     WriteFiles.write_excel(seqs_info,output)
-
-
+    logger.warn('Finish merging！ Thanks for using anBank')
 
 def get_fasta_seq(user,excel,input_dir_raw,output_dir,qual_length,seq_start,seq_end):
 
@@ -230,3 +241,67 @@ def merge_result(data_dir):
     data1.close()
     data2.close()
     data6.close()
+
+
+def run_extract(input_excel,output_excel):
+    excel_info = ReadFiles.read_excel_onesheet(input_excel, 'analysis')
+
+
+    writebook = xlwt.Workbook()
+    sheet_name = writebook.add_sheet('analysis',cell_overwrite_ok=True)
+    header = ['ID','样品来源','Treatment','菌株编号',
+              '测序质量','登录号','相似度','保菌等级']
+
+    for ii in range(len(header)):
+        nrow = 0
+        sheet_name.write(nrow, ii, header[ii].decode('utf-8'))
+
+    for k1 in excel_info.keys():
+        identity = excel_info[k1]['相似度']
+        seq_qual = excel_info[k1]['测序质量']
+
+        if identity != '' and seq_qual =='成功' :
+            identity2 = float(identity)
+            if identity2 <= 97:
+                nrow += 1
+                if identity2 >94:
+                    rank_info = 1
+                elif identity2>90:
+                    rank_info = 2
+                else :
+                    rank_info = 3
+                info = [ nrow , excel_info[k1]['样品来源'],
+                        excel_info[k1]['Treatment'],
+                        excel_info[k1]['菌株编号'],
+                        excel_info[k1]['测序质量'],
+                        excel_info[k1]['登录号'],
+                        excel_info[k1]['相似度'],
+                        '%.2f' % rank_info
+                        ]
+                for ii in range(len(info)):
+                    sheet_name.write(nrow, ii, info[ii].decode('utf-8'))
+                    print info
+            else:
+                pass
+                # print identity,identity2,type(identity2)
+
+    print output_excel
+    writebook.save(output_excel)
+    # print excel_info
+
+def run_split(fasta,otu_file,outdir):
+    #otus = {}
+    safe_makedir(outdir)
+    with open(otu_file) as data1:
+        for each_line in data1:
+            if each_line.strip() == '':
+                continue
+            cnt = each_line.strip().split()
+            otu_accession = cnt[0].split('|')[3].split('_')[1].split('.')[0]
+            #otus[cnt] = cnt[1:]
+            cmd = "extract_seqs_by_sample_id.py -i %s -o %s/%s.fa -s %s " % (fasta,outdir,otu_accession,','.join(cnt[1:]) )
+            print cmd
+            logger.info(cmd)
+            os.system(cmd)
+
+    pass

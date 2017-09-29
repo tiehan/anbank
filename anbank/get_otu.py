@@ -25,7 +25,7 @@ from anbank.filehandler import safe_makedir
 db_16s = os.path.join(base_dir,'database/16SMicrobial')
 greengene_fa = os.path.join(base_dir,'database/greengene/gg_13_8_otus/rep_set/97_otus.fasta')
 greengene_taxonomy = os.path.join(base_dir,'database/greengene/gg_13_8_otus/taxonomy/97_otu_taxonomy.txt')
-
+rdp_path = os.path.join(base_dir,'lib/rdp_classifier_2.2/rdp_classifier-2.2.jar')
 
 def analysis_otu_info(blast_result,otu_result,analysis_result):
     seqs_info = {}
@@ -61,9 +61,17 @@ def get_taxonomy_info_by_rdp(input_fasta):
     fasta_dir = os.path.dirname(input_fasta)
     fasta_base_name = os.path.basename(fasta_dir).split('.')[0]
     os.chdir(fasta_dir)
-    cmd = 'export RDP_JAR_PATH=/sam/rdp_classifier_2.2/rdp_classifier-2.2.jar;/usr/lib/qiime/bin/assign_taxonomy.py -i %s -m rdp --rdp_max_memory 40000 -o  rdp_assigned_taxonomy -r %s -t %s ' % (input_fasta,greengene_fa,greengene_taxonomy)
+    cmd1 = "source /sam/anBank/lib/miniconda2/bin/activate qiime1;"
+    cmd = "export RDP_JAR_PATH=%s;" \
+          "assign_taxonomy.py -i %s -m rdp --rdp_max_memory 40000 -o  rdp_assigned_taxonomy -r %s -t %s " % (rdp_path,input_fasta,greengene_fa,greengene_taxonomy)
+
+    # print cmd
+
     logger.warn(cmd)
     os.system(cmd)
+
+    # exit()
+
     os.chdir(work_here)
 
     # rdp_result_file = os.path.join(fasta_dir,'rdp_assigned_taxonomy','%s_tax_assignments.txt' %fasta_base_name)
@@ -87,12 +95,18 @@ def get_otu_by_rdp(workdir,input_fa,genus_loc = '.'):
 
     analysis_result = os.path.basename(input_fa).replace('.fa','_otus_result.tsv')
 
-    cmd1 = '/usr/lib/qiime/bin/pick_otus.py -i %s -m blast -o ./ -b %s' %(input_fa,db_16s)
-    cmd2 = '/usr/lib/qiime/bin/pick_rep_set.py -i %s -f %s -o rep.fna' % (otu_result,input_fa)
+    #/usr/lib/qiime/bin/ old path
+    cmd1 = 'pick_otus.py -i %s -m blast -o ./ -b %s' %(input_fa,db_16s)
+    cmd2 = 'pick_rep_set.py -i %s -f %s -o rep.fna' % (otu_result,input_fa)
+    # cmd3 = "source /sam/anBank/lib/miniconda2/bin/deactivate"
     logger.info(cmd1)
     logger.info(cmd2)
     os.system(cmd1)
     os.system(cmd2)
+    # try:
+    #     os.system(cmd3)
+    # except:
+    #     pass
 
     analysis_otu_info(genus_result, otu_result, analysis_result)
 

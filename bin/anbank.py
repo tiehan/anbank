@@ -12,7 +12,7 @@ sys.path.insert(0, folder_here)
 sys.path.insert(0, folder_here[:-3])
 
 
-from anbank.main import run_main,run_merge
+from anbank.main import run_main,run_merge,run_extract,run_split
 import anbank
 
 @click.group()
@@ -29,19 +29,20 @@ def cli1():
 @click.option('--user', help=unicode("raw_data文件夹下的子文件夹，默认biogas",errors='ignore') ,default ='biogas' )
 @click.option('--filter_identity', help=unicode("相似性判断，默认小于97的相似性判断为比对失败的序列",errors='ignore') ,default=97 )
 @click.option('--version',nargs=0, default='.', help='程序版本')
-def run(excel,input,output,version,qual_length,seq_start,seq_end,filter_identity,user):
+@click.option('--rdp', help=unicode('总的序列是否聚类,默认的是True,如果False，则不聚类',errors='ignore'),default = 'True')
+def run(excel,input,output,version,qual_length,seq_start,seq_end,filter_identity,user,rdp):
    """run pipeline"""
    if len(version) == 0:
         print anbank.__version__
         exit()
-   run_main(excel,input,output,qual_length,seq_start,seq_end,filter_identity,user)
+   run_main(excel,input,output,qual_length,seq_start,seq_end,filter_identity,user,rdp)
+
    pass
 
 
 @click.group()
 def cli2():
     pass
-
 
 @cli2.command()
 @click.option('--excel',help=unicode("输入的excel文件,默认测序编号跟物种比对结果的名字要一致", errors='ignore'))
@@ -57,20 +58,54 @@ def merge(excel,output,user):
     run_merge(excel,user,input,output)
     pass
  
- 
+
+
 @click.group()
 def cli3():
     pass
  
  
 @cli3.command()
-@click.option('--output',help='excel')
+@click.option('--input',help=unicode("输入的excel文件", errors='ignore'))
+@click.option('--output',help=unicode("输出的excel文件", errors='ignore'))
+def extract(input,output):
+    """extract information"""
+    run_extract(input,output)
+    pass
+
+
+
+@click.group()
+def cli4():
+    pass
+
+@cli4.command()
+@click.option('--fasta',help=unicode("输入fasta文件", errors='ignore'))
+@click.option('--otu',help=unicode("输入otu文件", errors='ignore'))
+@click.option('--outdir',help=unicode("输出文件夹", errors='ignore'))
+def splitotu(fasta,otu,outdir):
+    """split otu"""
+    run_split(fasta,otu,outdir)
+    pass
+
+
+
+
+
+@click.group()
+def cli5():
+    pass
+
+@cli5.command()
+@click.option('--output', help='excel')
 def install():
     """install programs"""
     pass
- 
- 
-main  = click.CommandCollection(sources=[cli1, cli2, cli3])
+
+
+
+
+main  = click.CommandCollection(sources=[cli1, cli2, cli3,cli4,cli5])
  
 if __name__ == "__main__":
     main()
